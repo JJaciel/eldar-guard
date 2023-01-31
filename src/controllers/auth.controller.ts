@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { auth } from "firebase-admin";
 
-import { createToken } from "../jwt/jwt";
+import { createToken, refreshTokenIfExpired } from "../jwt/jwt";
 
 export async function signupController(req: Request, res: Response) {
   const { email, password } = req.body;
@@ -54,14 +54,19 @@ export async function signinController(req: Request, res: Response) {
   }
 }
 
-// refresh token?
-export function refreshTokenController(req: Request, res: Response) {
-  const { token } = req.body;
+export async function refreshTokenController(req: Request, res: Response) {
+  const { authorization } = req.headers;
+
+  const expiredToken = authorization?.split(" ")[1];
+  if (!expiredToken) {
+    return res.status(401).json({ error: "Token required" });
+  }
 
   try {
-    res.json({ newToken: "any-token" });
-  } catch (err) {
-    res.status(401).json({ error: "Invalid token" });
+    const token = await refreshTokenIfExpired(expiredToken);
+    res.header("Authorization", `Bearer ${token}`).send();
+  } catch (err: any) {
+    res.status(401).json({ error: err.message });
   }
 }
 
@@ -69,6 +74,6 @@ export function resetPasswordController(req: Request, res: Response) {
   const { email } = req.body;
   const user = null;
   if (!user) {
-    return res.status(404).json({ error: "Email not found" });
+    return res.status(404).json({ error: "Not implemented" });
   }
 }

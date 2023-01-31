@@ -1,10 +1,12 @@
-import { sign } from "jsonwebtoken";
+import { sign, decode } from "jsonwebtoken";
 import { readFileSync } from "fs";
 
-export function createToken(userId: string) {
-  const privateKeyFilePath = process.env.JWT_PRIVATE_KEY_PATH || "";
-  const passPhrase = process.env.PASSPHRASE || "";
+import { getAuthPrivateKeyPath, getAuthPassphrase } from "../util/envVars";
 
+const privateKeyFilePath = getAuthPrivateKeyPath();
+const passPhrase = getAuthPassphrase();
+
+export function createToken(userId: string) {
   const privateKey = readFileSync(privateKeyFilePath);
   const payload = {
     userId,
@@ -16,4 +18,28 @@ export function createToken(userId: string) {
     { algorithm: "RS256" }
   );
   return token;
+}
+
+export async function refreshTokenIfExpired(token: string) {
+  try {
+    const decoded = decode(token, { json: true });
+
+    const exp = decoded?.exp;
+    const userId: string = decoded?.userId;
+
+    if (!userId || !exp) {
+      throw new Error("No valid signature");
+    }
+
+    if (Date.now() <= exp * 1000) {
+      throw new Error("Invalid token"); // token does not expires yet
+    }
+
+    const newToken = createToken(userId);
+
+    return newToken;
+  } catch (e) {
+    console.log("e");
+    console.log(e);
+  }
 }

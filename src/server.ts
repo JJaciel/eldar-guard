@@ -11,10 +11,11 @@ import {
   resetPasswordController,
 } from "./controllers/auth.controller";
 import { initializeFirebase } from "./services/auth.service";
+import { getPort, getAllowedCors } from "./util/envVars";
 
 const app: Application = express();
-const port = process.env.PORT || 3000;
-const allowedCors = process.env.ALLOWED_CORS || "http://localhost:8080";
+const port = getPort();
+const allowedCors = getAllowedCors() || "http://localhost:8080";
 const corsOptions = {
   origin: allowedCors,
   exposedHeaders: ["Authorization", "F-Token"],
@@ -23,7 +24,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-app.get("/", (req: Request, res: Response) => res.send("Hello World"));
+initializeFirebase();
+
 app.post("/signup", signupController);
 app.post("/signin", signinController);
 app.post("/refresh", refreshTokenController);
@@ -37,23 +39,8 @@ app.use(logErrors);
 app.use(clientErrorHandler);
 app.use(errorHandler);
 
-initializeFirebase();
-
 const server = app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
-});
-
-process.on("SIGTERM", () => {
-  console.log("Received SIGTERM, shutting down server...");
-  server.close(() => {
-    console.log("Server stopped accepting new connections");
-  });
-
-  // Wait for existing connections to close
-  server.on("close", () => {
-    console.log("Server closed");
-    process.exit(0);
-  });
 });
 
 process.on("SIGINT", () => {
@@ -98,12 +85,7 @@ interface CustomError extends Error {
   status: number;
 }
 
-function errorHandler(
-  err: CustomError,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+function errorHandler(err: CustomError, req: Request, res: Response) {
   res.status(err.status || 500);
   res.json({
     message: err.message,
