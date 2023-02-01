@@ -10,7 +10,7 @@ import {
   refreshTokenController,
   resetPasswordController,
 } from "./controllers/auth.controller";
-import { initializeFirebase } from "./services/auth.service";
+import { initializeFirebase } from "./services/initializeFirebase";
 import { getPort, getAllowedCors } from "./util/envVars";
 
 const app: Application = express();
@@ -43,13 +43,25 @@ const server = app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
+server.on("error", (err) => {
+  console.log("error");
+  console.log(err.message);
+  server.close(() => {
+    console.log("closing server");
+  });
+
+  server.on("close", () => {
+    console.log("Server closed");
+    process.exit(1);
+  });
+});
+
 process.on("SIGINT", () => {
   console.log("Received SIGINT, shutting down server...");
   server.close(() => {
     console.log("Server stopped accepting new connections");
   });
 
-  // Wait for existing connections to close
   server.on("close", () => {
     console.log("Server closed");
     process.exit(0);

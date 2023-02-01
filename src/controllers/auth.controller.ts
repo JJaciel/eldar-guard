@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
 import { auth } from "firebase-admin";
+import { getFirestore, Timestamp } from "firebase-admin/firestore";
+
+const USERS_COLLECTION = "users";
 
 import { createToken, refreshTokenIfExpired } from "../jwt/jwt";
 
@@ -11,12 +14,21 @@ export async function signupController(req: Request, res: Response) {
   }
 
   try {
+    const db = getFirestore();
     const userRecord = await auth().createUser({
       email,
       password,
     });
     const customToken = await auth().createCustomToken(userRecord.uid);
     const token = createToken(userRecord.uid);
+
+    // email should be verified before create the dbUser
+    const userId = userRecord.uid;
+    await db.collection(USERS_COLLECTION).doc(userId).set({
+      userId,
+      email: userRecord.email,
+      createdAt: Timestamp.now(),
+    });
 
     res.header("Authorization", `Bearer ${token}`);
     res.header("F-Token", `${customToken}`);

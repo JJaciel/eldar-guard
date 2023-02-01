@@ -1,11 +1,29 @@
 # Eldar Guard
 
-A service to keep an eye in the gate
+Node service to provide authentication for Eldar Face client
 
-## Run locally
+### Setup
 
 Install dependencies
 
-```
+```sh
 npm i
 ```
+
+Add necessary env vars, follow .sample.env
+
+### Run locally
+
+Development
+
+```sh
+npm run dev
+```
+
+### Extra
+
+For EADDINUSE error
+´´´sh
+lsof -i tcp:4000
+kill -9 PID
+´´´
