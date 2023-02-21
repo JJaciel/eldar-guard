@@ -10,7 +10,7 @@ Install dependencies
 npm i
 ```
 
-Add necessary env vars, follow .sample.env
+Add necessary env vars, follow .env.sample
 
 ### Run locally
 

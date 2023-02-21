@@ -1,10 +1,29 @@
 import { Request, Response } from "express";
 import { auth } from "firebase-admin";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { getFirestore } from "firebase-admin/firestore";
 
 const USERS_COLLECTION = "users";
 
 import { createToken, refreshTokenIfExpired } from "../jwt/jwt";
+
+const initializeUserDB = async ({
+  userId,
+  email,
+}: {
+  userId: string;
+  email: string;
+}) => {
+  try {
+    const db = getFirestore();
+    await db.collection(USERS_COLLECTION).doc(userId).set({
+      userId,
+      email,
+      createdAt: new Date().toISOString(),
+    });
+  } catch (e: any) {
+    console.log("Error initializing User DB");
+  }
+};
 
 export async function signupController(req: Request, res: Response) {
   const { email, password } = req.body;
@@ -14,7 +33,6 @@ export async function signupController(req: Request, res: Response) {
   }
 
   try {
-    const db = getFirestore();
     const userRecord = await auth().createUser({
       email,
       password,
@@ -24,19 +42,17 @@ export async function signupController(req: Request, res: Response) {
 
     // email should be verified before create the dbUser
     const userId = userRecord.uid;
-    await db.collection(USERS_COLLECTION).doc(userId).set({
-      userId,
-      email: userRecord.email,
-      createdAt: Timestamp.now(),
-    });
+    const userEmail = userRecord.email as string;
+
+    await initializeUserDB({ userId, email: userEmail });
 
     res.header("Authorization", `Bearer ${token}`);
     res.header("F-Token", `${customToken}`);
     res.json({
       user: {
-        email: userRecord.email,
+        email: userEmail,
         isEmailVerified: userRecord.emailVerified,
-        userId: userRecord.uid,
+        userId: userId,
       },
     });
   } catch (error: any) {
@@ -62,6 +78,7 @@ export async function signinController(req: Request, res: Response) {
       },
     });
   } catch (error) {
+    console.log(error);
     res.status(404).json({ error: "User not found" });
   }
 }
